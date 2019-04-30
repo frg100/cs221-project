@@ -4,6 +4,9 @@ import pandas as pd
 import sqlite3
 from collections import defaultdict
 from util import *
+import csv
+import time
+import datetime
 
 
 # Table names
@@ -119,11 +122,40 @@ def extractFeatures(match):
     return phi
 
 def main(matches, players, playerAttributes):
+    with open('basicMatchData{}.csv'.format(random.random()), mode='w') as csv_file:
+        fieldnames = ['home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        sumTime = 0.
+        n = len(matches)
+        for index, match in matches.iterrows():
+            
+
+            start = time.time()
+            phi = extractFeatures(match)
+            goalDifference = match['home_team_goal'] - match['away_team_goal']
+            if (goalDifference > 0):
+                result = 1
+            elif (goalDifference == 0):
+                result = 0
+            else:
+                result = -1
+            phi['result'] = result
+
+            writer.writerow(phi)
+            sumTime += time.time()-start
+            timeElapsed = str(datetime.timedelta(seconds=sumTime))
+            averageTime = sumTime/(index+1)
+            timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
+            print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
+    """
     trainExamples =  matches.sample(100)
     testExamples = matches.sample(20)
     print "Training data to learn weights"
     weights = learnPredictor(trainExamples, testExamples, extractFeatures, numIters=20, eta=0.01)
     print weights
+    """
 
 
 def learnPredictor(trainExamples, testExamples, featureExtractor, numIters, eta):
