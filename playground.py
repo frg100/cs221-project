@@ -7,6 +7,10 @@ from util import *
 import csv
 import time
 import datetime
+import re
+
+fileNameToWriteTo = 'basicMatchDataOracleGoals.csv'
+print "Writing to {}".format(fileNameToWriteTo)
 
 
 # Table names
@@ -19,7 +23,7 @@ def readData():
     Read in match, player, and player attribute data
     """
     print "Reading in match data..."
-    matches = pd.read_sql_query("select * from Match;", conn)
+    matches = pd.read_sql_query("select * from Match WHERE possession IS NOT null AND shoton IS NOT null;", conn)
     print "Reading in player data..."
     players = pd.read_sql_query("select * from Player;", conn)
     print "Reading in player attribute data..."
@@ -110,20 +114,57 @@ def calculateBettingFeatures(match, phi):
         awayPercent = 1./match[house + "A"]
         phi["{} betting difference".format(house)] = homePercent - awayPercent
 
+def calculatePossession(match, phi):
+    possession = match['possession']
+    pattern = '<elapsed>90</elapsed>.*<awaypos>(.*)</awaypos><homepos>(.*)</homepos>.*</possession>'
+    a = re.search(pattern, possession)
+    if (a):
+        homePos = a.group(1)
+        awayPos = a.group(2)
+
+        phi['home_possession'] = homePos
+        phi['away_possession'] = awayPos
+
+
+def calculateShotsOnGoal(homeTeam, awayTeam, match, phi):
+    shotsOn = match['shoton']
+    pattern = '<team>([0-9]*)</team>'
+    groups = re.findall(pattern, shotsOn)
+    if(groups):
+        phi['home_shots_on_goal'] = 0.
+        phi['away_shots_on_goal'] = 0.
+        for group in groups:
+            if (int(group) == homeTeam):
+                phi['home_shots_on_goal'] += 1
+            elif (int(group) == awayTeam):
+                phi['away_shots_on_goal'] += 1
+
+
+
 
 def extractFeatures(match):
     phi = defaultdict(float)
 
     season = match['season']
+    homeTeam = match['home_team_api_id']
+    awayTeam = match['away_team_api_id']
 
-    calculatePlayerAttributeFeatures(match, phi, season)
-    calculateBettingFeatures(match, phi)
+    #calculatePlayerAttributeFeatures(match, phi, season)
+    #calculateBettingFeatures(match, phi)
+    #calculatePossession(match, phi)
+    #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
+    phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
 
     return phi
 
+
+    
+
 def main(matches, players, playerAttributes):
-    with open('basicMatchData{}.csv'.format(random.random()), mode='w') as csv_file:
-        fieldnames = ['home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
+    with open(fileNameToWriteTo, mode='w') as csv_file:
+        #fieldnames = ['away_possession', 'home_possession', 'home_shots_on_goal', 'away_shots_on_goal', 'home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
+        #fieldnames = ['away_possession', 'home_possession', 'home_shots_on_goal', 'away_shots_on_goal', 'result']
+        fieldnames = ['goal_difference', 'result']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -141,9 +182,10 @@ def main(matches, players, playerAttributes):
                 result = 0
             else:
                 result = -1
-            phi['result'] = result
-
-            writer.writerow(phi)
+            
+            if (phi):  
+                phi['result'] = result
+                writer.writerow(phi)
             sumTime += time.time()-start
             timeElapsed = str(datetime.timedelta(seconds=sumTime))
             averageTime = sumTime/(index+1)
