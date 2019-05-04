@@ -6,19 +6,23 @@ import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 import random
+import sys
 
 # Define hyperparameters
 numFeatures = 86
+oracleNumFeatures = {'': 90, 'Short': 4, 'Goals': 1}
 numOutputs = 3
 datasetCSVPath = './basicMatchData.csv'
+oracleDatasetCSVPath = './basicMatchDataOracle.csv'
 eta = 1e-5
-numEpochs = 10000
+numEpochs = 1000
 validation_split = .2
 shuffle_dataset = True
 random_seed= 42
 batch_size = 5
 
-indicatorMap = {-1: [1, 0, 0], 0: [0, 1, 0], 1: [0, 0, 1]}
+indicatorMap = {-1: 0, 0: 1, 1: 2}
+
 
 # Importing the dataset
 def importDataset(datasetCSVPath):
@@ -27,7 +31,7 @@ def importDataset(datasetCSVPath):
     df = df[~np.isnan(df).any(axis=1)]
     # Separate into inputs and targets by last column
     inputs = np.array(df[:, :-1], dtype='float32')
-    targets = np.array([indicatorMap[int(y)] for y in df[:, -1]], dtype='float32')
+    targets = np.array([indicatorMap[int(y)] for y in df[:, -1]], dtype='int64')
 
     # Turn into tensors
     inputs = torch.from_numpy(inputs)
@@ -44,7 +48,7 @@ def importDataset(datasetCSVPath):
         np.random.seed(random_seed)
         np.random.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
-    print dataset_size, len(train_indices), len(val_indices)
+    print "Dataset size: {}, Train DL size: {}, Test DL size: {}".format(dataset_size, len(train_indices), len(val_indices))
 
     # Creating PT data samplers and loaders:
     train_sampler = SubsetRandomSampler(train_indices)
@@ -76,25 +80,76 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
 
         # Print progress
         if ((epoch + 1) % 10 == 0):
-            print "Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Test error: {:.4f}".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model))
+            sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Test error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
+            sys.stdout.flush()
+    print ""
 
 
 def evaluateModel(dl, model):
+    m =  nn.Softmax(dim=1)
     errors = 0.
     for xb, yb in dl:
         pred = model(xb)
-        if (np.argmax(pred.detach().numpy(), axis=1) != np.argmax(yb.detach().numpy(), axis=1)):
+        # Checks whether or not the max value in the arrays are the same => both have the same result predicted
+        if (np.argmax(m(pred).detach().numpy()) != yb.numpy()[0]):
             errors += 1
     return float(errors)/len(dl)
 
 
-def main():
-    inputs, targets, train_dl, validation_dl, evaluate_train_dl = importDataset(datasetCSVPath)
+def nearestNeighborY(dl, v):
+    pdist = nn.PairwiseDistance(p=2)
 
-    # Define model
+    bestSimilarity = 0.
+    bestY = None
+    for step, (xb, yb) in enumerate(dl):
+        similarity = pdist(xb, v)
+        if (similarity > bestSimilarity):
+            bestSimilarity = similarity
+            bestY = yb
+    return bestY
+
+def knn(train_dl, test_dl, k):
+    errors = 0.
+    for step, (xb, yb) in enumerate(test_dl):
+        pred = nearestNeighborY(train_dl, xb)
+        if (np.argmax(pred.detach().numpy(), axis=1) != np.argmax(yb.detach().numpy(), axis=1)):
+            errors += 1
+        sys.stdout.write("Step [{}/{}], Error: {:.4f}\r".format(step, len(test_dl), errors/(step+1)))
+        sys.stdout.flush()
+    print ""
+    return float(errors)/len(test_dl)
+
+
+def main():
+    print "Loading data..."
+    inputs, targets, train_dl, validation_dl, evaluate_train_dl = importDataset(datasetCSVPath)
+    print "Finished loading data!"
+
+    # Oracle model
+    for edit in ['', 'Goals', 'Short']:
+        print "Training {} oracle...".format(edit)
+        #knn(train_dl, validation_dl, 1)
+        oracle_inputs, oracle_targets, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl = importDataset('./basicMatchDataOracle{}.csv'.format(edit))
+        oracle_model = nn.Linear(oracleNumFeatures[edit], 3)
+        oracle_preds = oracle_model(oracle_inputs)
+        oracle_loss_fn = torch.nn.CrossEntropyLoss()
+        oracle_opt = torch.optim.SGD(oracle_model.parameters(), lr=eta)
+        #oracle_loss = oracle_loss_fn(oracle_model(oracle_inputs), oracle_targets)
+
+        # Train for numEpochs epochs
+        fit(numEpochs, oracle_model, oracle_loss_fn, oracle_opt, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl)
+        oracle_preds = oracle_model(oracle_inputs)
+
+        oracle_trained_weights = oracle_model.weight
+
+        #print oracle_preds, oracle_targets, oracle_trained_weights
+        print "Finished training {} oracle!".format(edit)
+
+    # Baseline Model
+    print "Training baseline..."
     model = nn.Linear(numFeatures, 3)
     preds = model(inputs)
-    loss_fn = F.mse_loss
+    loss_fn = torch.nn.CrossEntropyLoss()
     opt = torch.optim.SGD(model.parameters(), lr=eta)
     loss = loss_fn(model(inputs), targets)
 
@@ -102,10 +157,8 @@ def main():
     fit(numEpochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train_dl)
     preds = model(inputs)
 
-    print model, model.parameters(), model.weight
     trained_weights = model.weight
-    print model, trained_weights
-
+    print "Finished training baseline!"
 
 
 if __name__ == '__main__':
