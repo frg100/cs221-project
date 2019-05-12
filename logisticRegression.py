@@ -12,7 +12,7 @@ import sys
 numFeatures = 86
 oracleNumFeatures = {'': 90, 'Short': 4, 'Goals': 1}
 numOutputs = 3
-datasetCSVPath = './basicMatchData.csv'
+datasetCSVPath = './cleanedBasicMatchData.csv'
 oracleDatasetCSVPath = './basicMatchDataOracle.csv'
 eta = 1e-5
 numEpochs = 1000
@@ -125,28 +125,28 @@ def main():
     inputs, targets, train_dl, validation_dl, evaluate_train_dl = importDataset(datasetCSVPath)
     print "Finished loading data!"
 
-    # Oracle model
-    for edit in ['', 'Goals', 'Short']:
-        print "Training {} oracle...".format(edit)
-        #knn(train_dl, validation_dl, 1)
-        oracle_inputs, oracle_targets, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl = importDataset('./basicMatchDataOracle{}.csv'.format(edit))
-        oracle_model = nn.Linear(oracleNumFeatures[edit], 3)
-        oracle_preds = oracle_model(oracle_inputs)
-        oracle_loss_fn = torch.nn.CrossEntropyLoss()
-        oracle_opt = torch.optim.SGD(oracle_model.parameters(), lr=eta)
-        #oracle_loss = oracle_loss_fn(oracle_model(oracle_inputs), oracle_targets)
+    # # Oracle model
+    # for edit in ['', 'Goals', 'Short']:
+    #     print "Training {} oracle...".format(edit)
+    #     #knn(train_dl, validation_dl, 1)
+    #     oracle_inputs, oracle_targets, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl = importDataset('./basicMatchDataOracle{}.csv'.format(edit))
+    #     oracle_model = nn.Linear(oracleNumFeatures[edit], 3)
+    #     oracle_preds = oracle_model(oracle_inputs)
+    #     oracle_loss_fn = torch.nn.CrossEntropyLoss()
+    #     oracle_opt = torch.optim.SGD(oracle_model.parameters(), lr=eta)
+    #     #oracle_loss = oracle_loss_fn(oracle_model(oracle_inputs), oracle_targets)
 
-        # Train for numEpochs epochs
-        fit(numEpochs, oracle_model, oracle_loss_fn, oracle_opt, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl)
-        oracle_preds = oracle_model(oracle_inputs)
+    #     # Train for numEpochs epochs
+    #     fit(numEpochs, oracle_model, oracle_loss_fn, oracle_opt, oracle_train_dl, oracle_validation_dl, oracle_evaluate_train_dl)
+    #     oracle_preds = oracle_model(oracle_inputs)
 
-        oracle_trained_weights = oracle_model.weight
+    #     oracle_trained_weights = oracle_model.weight
 
-        #print oracle_preds, oracle_targets, oracle_trained_weights
-        print "Finished training {} oracle!".format(edit)
+    #     #print oracle_preds, oracle_targets, oracle_trained_weights
+    #     print "Finished training {} oracle!".format(edit)
 
     # Baseline Model
-    print "Training baseline..."
+    print "Training model..."
     model = nn.Linear(numFeatures, 3)
     preds = model(inputs)
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -158,7 +158,7 @@ def main():
     preds = model(inputs)
 
     trained_weights = model.weight
-    print "Finished training baseline!"
+    print "Finished training model!"
 
 
 if __name__ == '__main__':
