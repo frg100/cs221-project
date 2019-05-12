@@ -28,9 +28,13 @@ def readData():
     players = pd.read_sql_query("select * from Player;", conn)
     print "Reading in player attribute data..."
     playerAttributes = pd.read_sql_query("select * from Player_Attributes;", conn)
+    print "Reading in team data..."
+    teams = pd.read_sql_query("select * from Team", conn)
+    print "Reading in team attribute data..."
+    teamAttributes = pd.read_sql_query("select * from Team_Attributes", conn)
     print "Finished reading in data!"
 
-    return matches, players, playerAttributes
+    return matches, players, playerAttributes, teams, teamAttributes
 
 
 
@@ -87,6 +91,35 @@ def getPlayerAttributes(playerId, season):
         attributes['gkKicking'] = player['gk_kicking']  
         attributes['gkPositioning'] = player['gk_positioning']  
         attributes['gkReflexes'] = player['gk_reflexes']
+    return attributes
+
+def getTeamAttributes(teamId, season):
+    if (np.isnan(teamId)):
+        return {}
+    earlyDate = '{}-07-01 00:00:00'.format(season.split("/")[0])
+    lateDate = '{}-07-01 00:00:00'.format(season.split("/")[1])
+    query = "SELECT * FROM 'Team_Attributes' WHERE team_api_id IS {} AND date > '{}' AND date < '{}' limit 1".format(teamId, earlyDate, lateDate)
+    teams = pd.read_sql_query(query, conn)
+
+    attributes = defaultdict(float)
+    for index, team in teams.iterrows():
+        attributes['buildUpPlayPositioningClass'] = 1 if team['buildUpPlayPositioningClass'] == 'Organised' else 0
+        attributes['chanceCreationPositioningClass'] = 1 if team['chanceCreationPositioningClass'] == 'Organised' else 0
+        attributes['defenceDefenderLineClass'] = 1 if team['defenceDefenderLineClass'] == 'Cover' else 0
+        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
+        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
+        attributes['buildUpPlayDribbling'] = team['buildUpPlayDribbling']
+        attributes['buildUpPlayPassing'] = team['buildUpPlayPassing']
+        attributes['chanceCreationPassing'] = team['chanceCreationPassing']
+        attributes['chanceCreationCrossing'] = team['chanceCreationCrossing']
+        attributes['chanceCreationShooting'] = team['chanceCreationShooting']
+        attributes['defencePressure'] = team['defencePressure']
+        attributes['defenceAggression'] = team['defenceAggression']
+        attributes['defenceTeamWidth'] = team['defenceTeamWidth']
+        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
+        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
+        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
+        
     return attributes
 
 
@@ -149,22 +182,26 @@ def extractFeatures(match):
     homeTeam = match['home_team_api_id']
     awayTeam = match['away_team_api_id']
 
-    #calculatePlayerAttributeFeatures(match, phi, season)
-    #calculateBettingFeatures(match, phi)
+    calculatePlayerAttributeFeatures(match, phi, season)
+    calculateBettingFeatures(match, phi)
+    combineVectors(phi, getTeamAttributes(homeTeam, season), 'home')
+    combineVectors(phi, getTeamAttributes(awayTeam, season), 'away')
     #calculatePossession(match, phi)
     #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
-    phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
+    #phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
 
     return phi
 
 
     
 
-def main(matches, players, playerAttributes):
+def main(matches, players, playerAttributes, teams, teamAttributes):
     with open(fileNameToWriteTo, mode='w') as csv_file:
-        #fieldnames = ['away_possession', 'home_possession', 'home_shots_on_goal', 'away_shots_on_goal', 'home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
+        # TODO: Add in Team Stuff VV
+        fieldnames = ['home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
+        
         #fieldnames = ['away_possession', 'home_possession', 'home_shots_on_goal', 'away_shots_on_goal', 'result']
-        fieldnames = ['goal_difference', 'result']
+        #fieldnames = ['goal_difference', 'result']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -234,5 +271,5 @@ def learnPredictor(trainExamples, testExamples, featureExtractor, numIters, eta)
 
 
 if __name__ == '__main__':
-    matches, players, playerAttributes = readData()
-    main(matches, players, playerAttributes)
+    matches, players, playerAttributes, teams, teamAttributes = readData()
+    main(matches, players, playerAttributes, teams, teamAttributes)
