@@ -4,7 +4,7 @@ import sys
 import numpy as np
 
 fileName = 'basicMatchData.csv'
-writeTo = 'cleanedBasicMatchData'
+writeTo = 'cleanedBasicMatchData.csv'
 
 
 def readData(fileName):
