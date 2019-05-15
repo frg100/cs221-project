@@ -9,7 +9,7 @@ import time
 import datetime
 import re
 
-fileNameToWriteTo = 'basicMatchDataOracleGoals.csv'
+fileNameToWriteTo = 'matchTeamData.csv'
 print "Writing to {}".format(fileNameToWriteTo)
 
 
@@ -93,20 +93,19 @@ def getPlayerAttributes(playerId, season):
         attributes['gkReflexes'] = player['gk_reflexes']
     return attributes
 
-def getTeamAttributes(teamId, season):
+def getTeamAttributes(teamId):
     if (np.isnan(teamId)):
         return {}
-    earlyDate = '{}-07-01 00:00:00'.format(season.split("/")[0])
-    lateDate = '{}-07-01 00:00:00'.format(season.split("/")[1])
-    query = "SELECT * FROM 'Team_Attributes' WHERE team_api_id IS {} AND date > '{}' AND date < '{}' limit 1".format(teamId, earlyDate, lateDate)
+    query = "SELECT * FROM 'Team_Attributes' WHERE team_api_id IS {}".format(teamId)
     teams = pd.read_sql_query(query, conn)
 
-    attributes = defaultdict(float)
+    totalAttributes = []
     for index, team in teams.iterrows():
+        attributes =  defaultdict(float)
+        
         attributes['buildUpPlayPositioningClass'] = 1 if team['buildUpPlayPositioningClass'] == 'Organised' else 0
         attributes['chanceCreationPositioningClass'] = 1 if team['chanceCreationPositioningClass'] == 'Organised' else 0
         attributes['defenceDefenderLineClass'] = 1 if team['defenceDefenderLineClass'] == 'Cover' else 0
-        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
         attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
         attributes['buildUpPlayDribbling'] = team['buildUpPlayDribbling']
         attributes['buildUpPlayPassing'] = team['buildUpPlayPassing']
@@ -116,10 +115,9 @@ def getTeamAttributes(teamId, season):
         attributes['defencePressure'] = team['defencePressure']
         attributes['defenceAggression'] = team['defenceAggression']
         attributes['defenceTeamWidth'] = team['defenceTeamWidth']
-        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
-        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
-        attributes['buildUpPlaySpeed'] = team['buildUpPlaySpeed']
-        
+        totalAttributes.append(attributes)
+
+    artibutes = averageVectors(totalAttributes)
     return attributes
 
 
@@ -135,7 +133,6 @@ def calculatePlayerAttributeFeatures(match, phi, season):
     awayVector = averageVectors(awayPlayerAttributes)
 
     # TODO: Average by player type (gk fields should only be calculated for the gk playing)
-
     combineVectors(phi, homeVector, 'home')
     combineVectors(phi, awayVector, 'away')
 
@@ -172,20 +169,19 @@ def calculateShotsOnGoal(homeTeam, awayTeam, match, phi):
             elif (int(group) == awayTeam):
                 phi['away_shots_on_goal'] += 1
 
-
-
-
 def extractFeatures(match):
     phi = defaultdict(float)
 
     season = match['season']
-    homeTeam = match['home_team_api_id']
-    awayTeam = match['away_team_api_id']
+    homeTeamID = match['home_team_api_id']
+    awayTeamID = match['away_team_api_id']
 
+    phi['homeTeamID'] = homeTeamID
+    phi['awayTeamID'] = awayTeamID
     calculatePlayerAttributeFeatures(match, phi, season)
     calculateBettingFeatures(match, phi)
-    combineVectors(phi, getTeamAttributes(homeTeam, season), 'home')
-    combineVectors(phi, getTeamAttributes(awayTeam, season), 'away')
+    combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
+    combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
     #calculatePossession(match, phi)
     #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
     #phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
@@ -197,37 +193,34 @@ def extractFeatures(match):
 
 def main(matches, players, playerAttributes, teams, teamAttributes):
     with open(fileNameToWriteTo, mode='w') as csv_file:
-        # TODO: Add in Team Stuff VV
-        fieldnames = ['home_shortPass', 'home_headers', 'home_balance', 'away_finishing', 'away_reactions', 'home_slidingTackle', 'home_freeKicks', 'away_aggression', 'home_positioning', 'home_aggression', 'home_curve', 'away_longShot', 'home_gkPositioning', 'home_sprintSpeed', 'away_marking', 'home_finishing', 'away_vision', 'home_longPass', 'WH betting difference', 'away_headers', 'away_strength', 'home_acceleration', 'home_standingTackle', 'home_marking', 'away_gkKicking', 'home_gkHandling', 'away_curve', 'home_dribbling', 'home_gkKicking', 'home_volleys', 'home_reactions', 'IW betting difference', 'away_gkDiving', 'home_longShot', 'home_stamina', 'away_power', 'LB betting difference', 'home_rating', 'home_agility', 'VC betting difference', 'home_defensiveWorkRate', 'away_agility', 'home_preferredFoot', 'away_penalties', 'home_power', 'home_penalties', 'home_control', 'away_balance', 'away_preferredFoot', 'home_gkReflexes', 'away_rating', 'away_positioning', 'B365 betting difference', 'home_potential', 'home_crossing', 'BW betting difference', 'home_interceptions', 'home_vision', 'BS betting difference', 'home_jump', 'away_crossing', 'home_strength', 'away_shortPass', 'home_attackingWorkRate', 'SJ betting difference', 'GB betting difference', 'away_acceleration', 'away_gkHandling', 'away_gkReflexes', 'away_jump', 'home_gkDiving', 'away_standingTackle', 'away_longPass', 'away_interceptions', 'away_control', 'away_stamina', 'away_freeKicks', 'away_gkPositioning', 'away_volleys', 'away_slidingTackle', 'PS betting difference', 'away_sprintSpeed', 'away_potential', 'away_dribbling', 'away_defensiveWorkRate', 'away_attackingWorkRate', 'result']
-        
-        #fieldnames = ['away_possession', 'home_possession', 'home_shots_on_goal', 'away_shots_on_goal', 'result']
-        #fieldnames = ['goal_difference', 'result']
+        fieldnames = extractFeatures(matches.iloc[0]).keys()
+        fieldnames.append('result')
+
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
         sumTime = 0.
         n = len(matches)
         for index, match in matches.iterrows():
-            
-
-            start = time.time()
-            phi = extractFeatures(match)
-            goalDifference = match['home_team_goal'] - match['away_team_goal']
-            if (goalDifference > 0):
-                result = 1
-            elif (goalDifference == 0):
-                result = 0
-            else:
-                result = -1
-            
-            if (phi):  
-                phi['result'] = result
-                writer.writerow(phi)
-            sumTime += time.time()-start
-            timeElapsed = str(datetime.timedelta(seconds=sumTime))
-            averageTime = sumTime/(index+1)
-            timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
-            print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
+            if index < 100:
+                start = time.time()
+                phi = extractFeatures(match)
+                goalDifference = match['home_team_goal'] - match['away_team_goal']
+                if (goalDifference > 0):
+                    result = 1
+                elif (goalDifference == 0):
+                    result = 0
+                else:
+                    result = -1
+                
+                if (phi):  
+                    phi['result'] = result
+                    writer.writerow(phi)
+                sumTime += time.time()-start
+                timeElapsed = str(datetime.timedelta(seconds=sumTime))
+                averageTime = sumTime/(index+1)
+                timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
+                print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
     """
     trainExamples =  matches.sample(100)
     testExamples = matches.sample(20)
