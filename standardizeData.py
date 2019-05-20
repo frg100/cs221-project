@@ -4,8 +4,8 @@ import sys
 import numpy as np
 import math
 
-fileName = 'basicMatchData.csv'
-writeTo = 'cleanedBasicMatchData.csv'
+fileName = 'matchTeamData.csv'
+writeTo = 'cleanedMatchTeamData.csv'
 
 
 def readData(fileName):
@@ -16,8 +16,8 @@ def readData(fileName):
 
 
 def calculateAverages(df):
-    labels = list(df)
-    accumulator = { label: { 'sum': 0, 'count': 0 } for label in labels }
+    labels = list(df)[:-1]
+    accumulator = { label: { 'sum': 0, 'count': 1 } for label in labels }
 
 
     for index, row in df.iterrows():
@@ -36,7 +36,7 @@ def calculateAverages(df):
 
 
 def calculateStandardDeviations(df, averages):
-    labels = list(df)
+    labels = list(df)[:-1]
     accumulator = { label: { 'sum': 0, 'count': 0 } for label in labels }
 
 
@@ -63,7 +63,7 @@ def standardize(df, averages, standardDeviations):
     """
     This function takes each value, subtracts the mean, and divides by the standard deviation
     """
-    labels = list(df)
+    labels = list(df)[:-1]
 
     for index, row in df.iterrows():
         for label in labels:
