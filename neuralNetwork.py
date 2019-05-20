@@ -11,7 +11,7 @@ import sys
 # Define hyperparameters
 n_in, n_h, n_out = 86, 10, 3
 datasetCSVPath = './cleanedBasicMatchData.csv'
-eta = 1e-5
+eta = 0.001
 numEpochs = 1000
 validation_split = .2
 shuffle_dataset = True
@@ -112,9 +112,7 @@ def main():
 
     # Train for numEpochs epochs
     fit(numEpochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train_dl)
-    preds = model(inputs)
 
-    trained_weights = model.weight
     print "Finished training model!"
 
 
