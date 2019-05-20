@@ -201,7 +201,6 @@ def head2head(homeTeamId, awayTeamId, phi, date):
     if (np.isnan(homeTeamId) or np.isnan(awayTeamId)):
         return {}
     query = "SELECT * FROM 'Match' WHERE ((home_team_api_id IS {} and away_team_api_id IS {}) or (home_team_api_id IS {} and away_team_api_id IS {})) AND date < '{}' ORDER BY date DESC".format(homeTeamId, awayTeamId, homeTeamId, awayTeamId, date)  
-    print query
     matches = pd.read_sql_query(query, conn)
     h2h = defaultdict(float)
     h2h['home_head_to_head'] = 0
