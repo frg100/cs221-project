@@ -169,6 +169,61 @@ def calculateShotsOnGoal(homeTeam, awayTeam, match, phi):
             elif (int(group) == awayTeam):
                 phi['away_shots_on_goal'] += 1
 
+def calculatePrev5Matches(teamId, date, phi, spot):
+    assert not np.isnan(teamId)
+
+    query = "SELECT * FROM 'Match' WHERE (home_team_api_id IS {} or away_team_api_id IS {}) AND date < '{}' ORDER BY date DESC Limit 5".format(teamId, teamId, date)
+    matches = pd.read_sql_query(query, conn)
+    if len(matches) < 5:
+        prev5Results = [np.nan for i in range(5)]
+    else:
+        prev5Results = []
+        for index, match in matches.iterrows():
+            if match['home_team_goal'] > match['away_team_goal']:
+                if match['home_team_api_id'] == teamId:
+                    prev5Results.append(1)
+                else:
+                    prev5Results.append(-1)
+            elif match['home_team_goal'] < match['away_team_goal']:
+                if match['home_team_api_id'] == teamId:
+                    prev5Results.append(-1)
+                else:
+                    prev5Results.append(1)
+            else:
+                prev5Results.append(0)
+    #[Closest to current date, ..., Farthest]
+    i = 0
+    for result in prev5Results:
+        phi['{}_previous_match_{}_result'.format(spot, i+1)] = result
+        i += 1
+
+def head2head(homeTeamId, awayTeamId, phi, date):
+    if (np.isnan(homeTeamId) or np.isnan(awayTeamId)):
+        return {}
+    query = "SELECT * FROM 'Match' WHERE ((home_team_api_id IS {} and away_team_api_id IS {}) or (home_team_api_id IS {} and away_team_api_id IS {})) AND date < '{}' ORDER BY date DESC".format(homeTeamId, awayTeamId, homeTeamId, awayTeamId, date)  
+    print query
+    matches = pd.read_sql_query(query, conn)
+    h2h = defaultdict(float)
+    h2h['home_head_to_head'] = 0
+    h2h['away_head_to_head'] = 0
+    if len(matches) == 0:
+        h2h['home_head_to_head'] = np.nan
+        h2h['away_head_to_head'] = np.nan
+    else:
+        for index, match in matches.iterrows():
+            a, b = match['home_team_api_id'], match['away_team_api_id']
+            if a == homeTeamId:
+                if match['home_team_goal'] > match['away_team_goal']:
+                    h2h['home_head_to_head'] += 1 
+                elif match['home_team_goal'] < match['away_team_goal']:
+                    h2h['away_head_to_head'] += 1 
+            elif b == homeTeamId:
+                if match['home_team_goal'] > match['away_team_goal']:
+                    h2h['away_head_to_head'] += 1 
+                elif match['home_team_goal'] < match['away_team_goal']:
+                    h2h['home_head_to_head'] += 1
+    combineVectors(phi, h2h, '')
+
 def extractFeatures(match):
     phi = defaultdict(float)
 
@@ -178,22 +233,25 @@ def extractFeatures(match):
 
     phi['homeTeamID'] = homeTeamID
     phi['awayTeamID'] = awayTeamID
-    calculatePlayerAttributeFeatures(match, phi, season)
-    calculateBettingFeatures(match, phi)
-    combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
-    combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
+    #calculatePlayerAttributeFeatures(match, phi, season)
+    #calculateBettingFeatures(match, phi)
+    #combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
+    #combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
+    #calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
+    #calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
+    head2head(homeTeamID, awayTeamID, phi, match['date'])
     #calculatePossession(match, phi)
     #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
     #phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
 
     return phi
 
-
-    
-
 def main(matches, players, playerAttributes, teams, teamAttributes):
     with open(fileNameToWriteTo, mode='w') as csv_file:
         fieldnames = extractFeatures(matches.iloc[0]).keys()
+        for i in range(1, 6):
+            fieldnames.append('home_previous_match_{}_result'.format(i))
+            fieldnames.append('away_previous_match_{}_result'.format(i))
         fieldnames.append('result')
 
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
@@ -202,7 +260,7 @@ def main(matches, players, playerAttributes, teams, teamAttributes):
         sumTime = 0.
         n = len(matches)
         for index, match in matches.iterrows():
-            if index < 100:
+            if index > 10000 and index < 10300:
                 start = time.time()
                 phi = extractFeatures(match)
                 goalDifference = match['home_team_goal'] - match['away_team_goal']
