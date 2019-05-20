@@ -233,12 +233,12 @@ def extractFeatures(match):
 
     phi['homeTeamID'] = homeTeamID
     phi['awayTeamID'] = awayTeamID
-    #calculatePlayerAttributeFeatures(match, phi, season)
-    #calculateBettingFeatures(match, phi)
-    #combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
-    #combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
-    #calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
-    #calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
+    calculatePlayerAttributeFeatures(match, phi, season)
+    calculateBettingFeatures(match, phi)
+    combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
+    combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
+    calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
+    calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
     head2head(homeTeamID, awayTeamID, phi, match['date'])
     #calculatePossession(match, phi)
     #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
@@ -260,25 +260,24 @@ def main(matches, players, playerAttributes, teams, teamAttributes):
         sumTime = 0.
         n = len(matches)
         for index, match in matches.iterrows():
-            if index > 10000 and index < 10300:
-                start = time.time()
-                phi = extractFeatures(match)
-                goalDifference = match['home_team_goal'] - match['away_team_goal']
-                if (goalDifference > 0):
-                    result = 1
-                elif (goalDifference == 0):
-                    result = 0
-                else:
-                    result = -1
+            start = time.time()
+            phi = extractFeatures(match)
+            goalDifference = match['home_team_goal'] - match['away_team_goal']
+            if (goalDifference > 0):
+                result = 1
+            elif (goalDifference == 0):
+                result = 0
+            else:
+                result = -1
                 
-                if (phi):  
-                    phi['result'] = result
-                    writer.writerow(phi)
-                sumTime += time.time()-start
-                timeElapsed = str(datetime.timedelta(seconds=sumTime))
-                averageTime = sumTime/(index+1)
-                timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
-                print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
+            if (phi):  
+                phi['result'] = result
+                writer.writerow(phi)
+            sumTime += time.time()-start
+            timeElapsed = str(datetime.timedelta(seconds=sumTime))
+            averageTime = sumTime/(index+1)
+            timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
+            print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
     """
     trainExamples =  matches.sample(100)
     testExamples = matches.sample(20)
