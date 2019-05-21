@@ -248,16 +248,15 @@ def extractFeatures(match):
 def main(matches, players, playerAttributes, teams, teamAttributes):
     with open(fileNameToWriteTo, mode='w') as csv_file:
         fieldnames = extractFeatures(matches.iloc[0]).keys()
-        for i in range(1, 6):
-            fieldnames.append('home_previous_match_{}_result'.format(i))
-            fieldnames.append('away_previous_match_{}_result'.format(i))
         fieldnames.append('result')
+        print "Writing {}-dimensional feature vectors to {}".format(len(fieldnames), fileNameToWriteTo)
 
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
         sumTime = 0.
         n = len(matches)
+        print "Writing {} examples".format(n)
         for index, match in matches.iterrows():
             start = time.time()
             phi = extractFeatures(match)

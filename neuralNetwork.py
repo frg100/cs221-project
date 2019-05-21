@@ -9,7 +9,7 @@ import random
 import sys
 
 # Define hyperparameters
-n_in, n_h, n_out = 86, 10, 3
+n_in, n_h, n_out = 134, 10, 3
 datasetCSVPath = './cleanedMatchTeamData.csv'
 eta = 0.001
 numEpochs = 1000
