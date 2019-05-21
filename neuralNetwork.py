@@ -9,8 +9,7 @@ import random
 import sys
 
 # Define hyperparameters
-n_in, n_h, n_out = 134, 10, 3
-datasetCSVPath = './cleanedMatchTeamData.csv'
+n_in, n_h, n_out = 122, 10, 3
 eta = 0.001
 numEpochs = 1000
 validation_split = .2
@@ -117,7 +116,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) != 2:
+        print "Usage: python neuralNetwork.py <DATA CSV FILE>"
+    else:
+        datasetCSVPath = sys.argv[1]
+        print "Reading data from {}".format(datasetCSVPath)
+        main()
 
 
 

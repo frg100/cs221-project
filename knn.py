@@ -9,9 +9,8 @@ import random
 import sys
 
 # Define hyperparameters
-numFeatures = 86
+numFeatures = 122
 numOutputs = 3
-datasetCSVPath = './cleanedBasicMatchData.csv'
 eta = 1e-5
 numEpochs = 1000
 validation_split = .2
@@ -98,7 +97,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) != 2:
+        print "Usage: python knn.py <DATA CSV FILE>"
+    else:
+        datasetCSVPath = sys.argv[1]
+        print "Reading data from {}".format(datasetCSVPath)
+        main()
 
 
 
