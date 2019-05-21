@@ -4,9 +4,6 @@ import sys
 import numpy as np
 import math
 
-fileName = 'matchTeamData.csv'
-writeTo = 'cleanedMatchTeamData.csv'
-
 
 def readData(fileName):
     print "Reading in match data..."
@@ -80,12 +77,19 @@ def standardize(df, averages, standardDeviations):
 
 
 if __name__ == '__main__':
-    df = readData(fileName)
-    averages = calculateAverages(df)
-    cleanDF = insertAverages(df, averages)
-    standardDeviations = calculateStandardDeviations(cleanDF, averages)
-    standardizedDF = standardize(cleanDF, averages, standardDeviations)
-    standardizedDF.to_csv(writeTo, encoding='utf-8', index=False)
+    if len(sys.argv) != 3:
+        print "Usage: python standardizeData.py <source> <destination>"
+    else:
+        fileName = sys.argv[1]
+        writeTo = sys.argv[2]
+        print "Reading data from {} and writing it to {}".format(fileName, writeTo)
+
+        df = readData(fileName)
+        averages = calculateAverages(df)
+        cleanDF = insertAverages(df, averages)
+        standardDeviations = calculateStandardDeviations(cleanDF, averages)
+        standardizedDF = standardize(cleanDF, averages, standardDeviations)
+        standardizedDF.to_csv(writeTo, encoding='utf-8', index=False)
 
 
 
