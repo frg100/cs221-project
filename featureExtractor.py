@@ -8,10 +8,7 @@ import csv
 import time
 import datetime
 import re
-
-fileNameToWriteTo = 'matchTeamData.csv'
-print "Writing to {}".format(fileNameToWriteTo)
-
+import sys
 
 # Table names
 # Country, League, Match, Player, Player_Attributes, Team, Team_Attributes
@@ -23,7 +20,7 @@ def readData():
     Read in match, player, and player attribute data
     """
     print "Reading in match data..."
-    matches = pd.read_sql_query("select * from Match WHERE possession IS NOT null AND shoton IS NOT null;", conn)
+    matches = pd.read_sql_query("select * from Match;", conn)
     print "Reading in player data..."
     players = pd.read_sql_query("select * from Player;", conn)
     print "Reading in player attribute data..."
@@ -117,7 +114,7 @@ def getTeamAttributes(teamId):
         attributes['defenceTeamWidth'] = team['defenceTeamWidth']
         totalAttributes.append(attributes)
 
-    artibutes = averageVectors(totalAttributes)
+    attributes = averageVectors(totalAttributes)
     return attributes
 
 
@@ -143,31 +140,6 @@ def calculateBettingFeatures(match, phi):
         homePercent = 1./match[house + "H"]
         awayPercent = 1./match[house + "A"]
         phi["{} betting difference".format(house)] = homePercent - awayPercent
-
-def calculatePossession(match, phi):
-    possession = match['possession']
-    pattern = '<elapsed>90</elapsed>.*<awaypos>(.*)</awaypos><homepos>(.*)</homepos>.*</possession>'
-    a = re.search(pattern, possession)
-    if (a):
-        homePos = a.group(1)
-        awayPos = a.group(2)
-
-        phi['home_possession'] = homePos
-        phi['away_possession'] = awayPos
-
-
-def calculateShotsOnGoal(homeTeam, awayTeam, match, phi):
-    shotsOn = match['shoton']
-    pattern = '<team>([0-9]*)</team>'
-    groups = re.findall(pattern, shotsOn)
-    if(groups):
-        phi['home_shots_on_goal'] = 0.
-        phi['away_shots_on_goal'] = 0.
-        for group in groups:
-            if (int(group) == homeTeam):
-                phi['home_shots_on_goal'] += 1
-            elif (int(group) == awayTeam):
-                phi['away_shots_on_goal'] += 1
 
 def calculatePrev5Matches(teamId, date, phi, spot):
     assert not np.isnan(teamId)
@@ -230,8 +202,6 @@ def extractFeatures(match):
     homeTeamID = match['home_team_api_id']
     awayTeamID = match['away_team_api_id']
 
-    phi['homeTeamID'] = homeTeamID
-    phi['awayTeamID'] = awayTeamID
     calculatePlayerAttributeFeatures(match, phi, season)
     calculateBettingFeatures(match, phi)
     combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
@@ -239,18 +209,23 @@ def extractFeatures(match):
     calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
     calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
     head2head(homeTeamID, awayTeamID, phi, match['date'])
-    #calculatePossession(match, phi)
-    #calculateShotsOnGoal(homeTeam, awayTeam, match, phi)
-    #phi['goal_difference'] = match['home_team_goal'] - match['away_team_goal']
+
 
     return phi
 
 def main(matches, players, playerAttributes, teams, teamAttributes):
-    with open(fileNameToWriteTo, mode='w') as csv_file:
-        fieldnames = extractFeatures(matches.iloc[0]).keys()
-        fieldnames.append('result')
-        print "Writing {}-dimensional feature vectors to {}".format(len(fieldnames), fileNameToWriteTo)
+    if len(sys.argv) != 2:
+        print "Usage: python featureExtractor.py <FILE TO WRITE TO>"
+        return
 
+    fileNameToWriteTo = sys.argv[1]
+    print "Writing to {}".format(fileNameToWriteTo)
+
+    with open(fileNameToWriteTo, mode='w') as csv_file:
+        fieldnames = extractFeatures(matches.iloc[10000]).keys()
+        print "Writing {}-dimensional feature vectors and result to {}".format(len(fieldnames), fileNameToWriteTo)
+        fieldnames.append('result')
+        
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -276,48 +251,3 @@ def main(matches, players, playerAttributes, teams, teamAttributes):
             averageTime = sumTime/(index+1)
             timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
             print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
-    """
-    trainExamples =  matches.sample(100)
-    testExamples = matches.sample(20)
-    print "Training data to learn weights"
-    weights = learnPredictor(trainExamples, testExamples, extractFeatures, numIters=20, eta=0.01)
-    print weights
-    """
-
-
-def learnPredictor(trainExamples, testExamples, featureExtractor, numIters, eta):
-    '''
-    Given |trainExamples| and |testExamples| (each one is a list of (x,y)
-    pairs), a |featureExtractor| to apply to x, and the number of iterations to
-    train |numIters|, the step size |eta|, return the weight vector (sparse
-    feature vector) learned.
-
-    You should implement stochastic gradient descent.
-
-    Note: only use the trainExamples for training!
-    You should call evaluatePredictor() on both trainExamples and testExamples
-    to see how you're doing as you learn after each iteration.
-    '''
-    weights = {}  # feature => weight
-    predictor = lambda x : 1 if dotProduct(featureExtractor(x), weights) >= 0 else -1
-    # BEGIN_YOUR_CODE (our solution is 12 lines of code, but don't worry if you deviate from this)
-    for t in range(numIters):
-        print "Starting iteration: " + str(t)
-        for index, match in trainExamples.iterrows():
-            print weights
-            goalDifference = match['home_team_goal'] - match['away_team_goal']
-            y = 1 if goalDifference > 0 else -1
-            phi = featureExtractor(match)
-            margin = dotProduct(weights, phi)*y
-            gradient = {}
-            if margin < 1:
-                increment(gradient, (-1 * y), phi)
-            increment(weights, -1 * eta, gradient)
-        print "Train error: %f, Test error: %f" %(evaluatePredictor(trainExamples, predictor), evaluatePredictor(testExamples, predictor))
-    # END_YOUR_CODE
-    return weights
-
-
-if __name__ == '__main__':
-    matches, players, playerAttributes, teams, teamAttributes = readData()
-    main(matches, players, playerAttributes, teams, teamAttributes)
