@@ -1,14 +1,9 @@
 #import csv
 import numpy as np
 import pandas as pd
-import sqlite3
 from collections import defaultdict
 from util import *
-import csv
-import time
-import datetime
-import re
-import sys
+import csv, time, datetime, re, sys, sqlite3
 
 # Table names
 # Country, League, Match, Player, Player_Attributes, Team, Team_Attributes
@@ -141,6 +136,7 @@ def calculateBettingFeatures(match, phi):
         awayPercent = 1./match[house + "A"]
         phi["{} betting difference".format(house)] = homePercent - awayPercent
 
+
 def calculatePrev5Matches(teamId, date, phi, spot):
     assert not np.isnan(teamId)
 
@@ -214,13 +210,6 @@ def extractFeatures(match):
     return phi
 
 def main(matches, players, playerAttributes, teams, teamAttributes):
-    if len(sys.argv) != 2:
-        print "Usage: python featureExtractor.py <FILE TO WRITE TO>"
-        return
-
-    fileNameToWriteTo = sys.argv[1]
-    print "Writing to {}".format(fileNameToWriteTo)
-
     with open(fileNameToWriteTo, mode='w') as csv_file:
         fieldnames = extractFeatures(matches.iloc[10000]).keys()
         print "Writing {}-dimensional feature vectors and result to {}".format(len(fieldnames), fileNameToWriteTo)
@@ -250,4 +239,17 @@ def main(matches, players, playerAttributes, teams, teamAttributes):
             timeElapsed = str(datetime.timedelta(seconds=sumTime))
             averageTime = sumTime/(index+1)
             timeLeft = str(datetime.timedelta(seconds=(n - index)*averageTime))
-            print "time elapsed: {} | {} percent done | time left: {}".format(timeElapsed, float(index)/len(matches)*100, timeLeft)
+            # Print progress
+            sys.stdout.write("time elapsed: {} | {} percent done | time left: {}\r".format(timeElapsed, float(index)/len(matches)*100, timeLeft))
+            sys.stdout.flush()
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print "Usage: python featureExtractor.py <FILE TO WRITE TO>"
+    else:
+        fileNameToWriteTo = sys.argv[1]
+        print "Writing to {}".format(fileNameToWriteTo)
+
+        matches, players, playerAttributes, teams, teamAttributes = readData()
+        main(matches, players, playerAttributes, teams, teamAttributes)
