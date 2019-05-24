@@ -198,13 +198,13 @@ def extractFeatures(match):
     homeTeamID = match['home_team_api_id']
     awayTeamID = match['away_team_api_id']
 
-    #calculatePlayerAttributeFeatures(match, phi, season)
+    calculatePlayerAttributeFeatures(match, phi, season)
     calculateBettingFeatures(match, phi)
-    #combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
-    #combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
-    #calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
-    #calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
-    #head2head(homeTeamID, awayTeamID, phi, match['date'])
+    combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
+    combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
+    calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
+    calculatePrev5Matches(awayTeamID, match['date'], phi, 'away')
+    head2head(homeTeamID, awayTeamID, phi, match['date'])
 
 
     return phi
