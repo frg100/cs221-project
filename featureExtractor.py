@@ -199,7 +199,7 @@ def extractFeatures(match):
     awayTeamID = match['away_team_api_id']
 
     calculatePlayerAttributeFeatures(match, phi, season)
-    calculateBettingFeatures(match, phi)
+#    calculateBettingFeatures(match, phi)
     combineVectors(phi, getTeamAttributes(homeTeamID), 'home')
     combineVectors(phi, getTeamAttributes(awayTeamID), 'away')
     calculatePrev5Matches(homeTeamID, match['date'], phi, 'home')
