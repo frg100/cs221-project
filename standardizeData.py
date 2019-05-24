@@ -89,7 +89,11 @@ if __name__ == '__main__':
         cleanDF = insertAverages(df, averages)
         standardDeviations = calculateStandardDeviations(cleanDF, averages)
         standardizedDF = standardize(cleanDF, averages, standardDeviations)
-        standardizedDF.to_csv(writeTo, encoding='utf-8', index=False)
+        standardizedDF = standardizedDF.sample(frac=1).reset_index(drop=True)
+        testDF = standardizedDF.head(int(np.floor(0.1 * len(standardizedDF))))
+        trainDF = standardizedDF.tail(len(standardizedDF) - int(np.floor(0.1 * len(standardizedDF))))
+        testDF.to_csv("test_" + writeTo, encoding='utf-8', index=False)
+        trainDF.to_csv("train_" + writeTo, encoding='utf-8', index=False)
 
 
 

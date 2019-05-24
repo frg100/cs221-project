@@ -9,9 +9,10 @@ import random
 import sys
 
 # Define hyperparameters
-n_in, n_h, n_out = 122, 10, 3
+n_in, n_h, n_out = 10, 10, 3
+#n_in, n_h, n_out = 10, 10, 3
 eta = 0.001
-numEpochs = 1000
+numEpochs = 50
 validation_split = .2
 shuffle_dataset = True
 random_seed= 42
@@ -22,25 +23,38 @@ indicatorMap = {-1: 0, 0: 1, 1: 2}
 
 # Importing the dataset
 def importDataset(datasetCSVPath):
-    df = pd.read_csv(datasetCSVPath)
+    testCSVPath = "test_" + datasetCSVPath
+    trainCSVPath = "train_" + datasetCSVPath
+
+    df = pd.read_csv(trainCSVPath)
     df = np.array(df.values, dtype='float32')
+    testDF = pd.read_csv(testCSVPath)
+    testDF = np.array(testDF.values, dtype='float32')
+
     df = df[~np.isnan(df).any(axis=1)]
+    testDF = testDF[~np.isnan(testDF).any(axis=1)]
+
     # Separate into inputs and targets by last column
     inputs = np.array(df[:, :-1], dtype='float32')
     targets = np.array([indicatorMap[int(y)] for y in df[:, -1]], dtype='int64')
+    test_inputs = np.array(testDF[:, :-1], dtype='float32')
+    test_targets = np.array([indicatorMap[int(y)] for y in testDF[:, -1]], dtype='int64')
 
     # Turn into tensors
     inputs = torch.from_numpy(inputs)
     targets = torch.from_numpy(targets)
+    test_inputs = torch.from_numpy(test_inputs)
+    test_targets = torch.from_numpy(test_targets)
 
     # Define dataset
     train_ds = TensorDataset(inputs, targets)
+    test_ds = TensorDataset(test_inputs, test_targets)
 
     # Creating data indices for training and validation splits:
     dataset_size = len(inputs)
     indices = list(range(dataset_size))
     split = int(np.floor(validation_split * dataset_size))
-    if shuffle_dataset :
+    if shuffle_dataset:
         np.random.seed(random_seed)
         np.random.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
@@ -56,8 +70,9 @@ def importDataset(datasetCSVPath):
                                                sampler=train_sampler)
     validation_dl = DataLoader(train_ds, batch_size=1,
                                                     sampler=valid_sampler)
+    test_dl = DataLoader(test_ds, batch_size=1)
 
-    return inputs, targets, train_dl, validation_dl, evaluate_train_dl
+    return inputs, targets, train_dl, validation_dl, evaluate_train_dl, test_dl
 
 
 # Stochastic Gradient Descent
@@ -76,8 +91,9 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
 
         # Print progress
         if ((epoch + 1) % 1 == 0):
-            sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Test error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
+            sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Dev error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
             sys.stdout.flush()
+        # print model[0].weight.data
     print ""
 
 
@@ -94,7 +110,7 @@ def evaluateModel(dl, model):
 
 def main():
     print "Loading data..."
-    inputs, targets, train_dl, validation_dl, evaluate_train_dl = importDataset(datasetCSVPath)
+    inputs, targets, train_dl, validation_dl, evaluate_train_dl, test_dl = importDataset(datasetCSVPath)
     print "Finished loading data!"
 
     # BModel
@@ -113,6 +129,10 @@ def main():
     fit(numEpochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train_dl)
 
     print "Finished training model!"
+
+    print
+    testError = evaluateModel(test_dl, model)
+    print "Final error: {}".format(testError)
 
 
 if __name__ == '__main__':
