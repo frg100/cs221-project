@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 import random
 import sys
+import matplotlib.pyplot as plt
 
 # Define hyperparameters
-n_in, n_h, n_out = 10, 10, 3
-#n_in, n_h, n_out = 10, 10, 3
-eta = 0.001
+n_in, n_h, n_out = 122, 10, 3
+eta = 0.01
 numEpochs = 50
 validation_split = .2
 shuffle_dataset = True
@@ -77,6 +77,11 @@ def importDataset(datasetCSVPath):
 
 # Stochastic Gradient Descent
 def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train_dl):
+
+    #arrays for plotting
+    error = []
+    iteration = []
+
     for epoch in range(num_epochs):
         # Train in batches
         for xb, yb in train_dl:
@@ -93,7 +98,22 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
         if ((epoch + 1) % 1 == 0):
             sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Dev error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
             sys.stdout.flush()
+
+            #append to arrays
+            error.append(loss.item())
+            iteration.append(epoch)
+
+    #plotting
+    plt.title('Loss Error Plot [neural network] [{}]'.format(datasetCSVPath[7:-8]))
+    plt.xlabel('Iteration')
+    plt.ylabel('Error')
+    plt.ion() # enables interactive mode
+    plt.plot(np.array(iteration), np.array(error))
+    plt.show()
+
         # print model[0].weight.data
+
+    plt.savefig('loss_nn_{}_.png'.format(datasetCSVPath[7:-8]))
     print ""
 
 

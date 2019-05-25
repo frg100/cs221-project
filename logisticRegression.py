@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import random
 import sys
+import matplotlib.pyplot as plt
 
 # Define hyperparameters
 numFeatures = 122
@@ -77,6 +78,11 @@ def importDataset(datasetCSVPath):
 
 # Utility function to train model
 def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train_dl):
+
+    #arrays for plotting
+    error = []
+    iteration = []
+
     for epoch in range(num_epochs):
         # Train in batches
         for xb, yb in train_dl:
@@ -93,10 +99,26 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
         if ((epoch + 1) % 1 == 0):
             sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Test error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
             sys.stdout.flush()
+
+            #append to arrays
+            error.append(loss.item())
+            iteration.append(epoch)
         #names = 'away_buildUpPlayDribbling,home_buildUpPlayPassing,home_shortPass,home_headers,home_balance,away_finishing,away_defenceDefenderLineClass,away_reactions,home_slidingTackle,home_freeKicks,away_aggression,home_positioning,home_aggression,away_chanceCreationPassing,home_curve,away_longShot,home_gkPositioning,home_sprintSpeed,away_marking,home_finishing,away_vision,home_longPass,WH betting difference,away_headers,home_buildUpPlaySpeed,away_strength,home_acceleration,home_standingTackle,home_marking,away_gkKicking,home_gkHandling,away_curve,home_previous_match_1_result,away_buildUpPlaySpeed,home_dribbling,home_defencePressure,home_gkKicking,home_volleys,home_reactions,IW betting difference,home_defenceTeamWidth,away_gkDiving,home_chanceCreationPassing,away_defenceTeamWidth,home_longShot,home_chanceCreationPositioningClass,home_stamina,away_power,LB betting difference,home_rating,home_previous_match_3_result,home_chanceCreationCrossing,home_agility,VC betting difference,_away_head_to_head,home_defensiveWorkRate,away_agility,away_previous_match_5_result,home_preferredFoot,away_penalties,home_power,home_penalties,away_previous_match_1_result,home_defenceAggression,away_chanceCreationCrossing,home_control,_home_head_to_head,home_previous_match_2_result,home_buildUpPlayPositioningClass,away_balance,home_previous_match_4_result,away_preferredFoot,home_gkReflexes,home_previous_match_5_result,away_rating,away_positioning,B365 betting difference,home_potential,home_crossing,home_defenceDefenderLineClass,BW betting difference,home_interceptions,home_vision,BS betting difference,away_buildUpPlayPassing,home_jump,away_chanceCreationShooting,away_crossing,home_strength,away_shortPass,home_attackingWorkRate,SJ betting difference,GB betting difference,away_acceleration,away_gkHandling,away_gkReflexes,away_jump,home_gkDiving,away_defenceAggression,away_previous_match_3_result,away_standingTackle,away_longPass,away_interceptions,home_chanceCreationShooting,away_control,away_defencePressure,away_chanceCreationPositioningClass,away_previous_match_4_result,away_stamina,away_freeKicks,away_gkPositioning,away_volleys,away_slidingTackle,PS betting difference,away_sprintSpeed,away_buildUpPlayPositioningClass,away_potential,home_buildUpPlayDribbling,away_dribbling,away_previous_match_2_result,away_defensiveWorkRate,away_attackingWorkRate,result'.split(",")
         #print model.weight
         #for x in ["{}: {}".format(names[i], abs(model.weight[i] * 100)) for i in range(len(names))]:
         #   print x
+
+    #plotting
+    plt.title('Loss Error Plot [logistic regression] [{}] [eta={}]'.format(datasetCSVPath[7:-8], eta))
+    plt.xlabel('Iteration')
+    plt.ylabel('Error')
+    plt.ion() # enables interactive mode
+    plt.plot(np.array(iteration), np.array(error))
+    plt.show()
+
+        # print model[0].weight.data
+
+    plt.savefig('loss_lr_{}_.png'.format(datasetCSVPath[7:-8]))
     print ""
 
 
