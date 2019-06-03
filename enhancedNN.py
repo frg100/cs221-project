@@ -18,8 +18,8 @@ numEpochs = 1000000
 validation_split = .2
 shuffle_dataset = True
 random_seed= 42
-numExamples = 100
-batch_size = numExamples
+numExamples = 0
+batch_size = 0
 
 indicatorMap = {-1: 0, 0: 1, 1: 2}
 
@@ -169,14 +169,13 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print "Usage: python neuralNetwork.py <DATA CSV FILE> <pcaflag>"
+    if len(sys.argv) != 3:
+        print "Usage: python neuralNetwork.py <DATA CSV FILE> <numExamples>"
     else:
         datasetCSVPath = sys.argv[1]
-        if len(sys.argv) == 3 and sys.argv[2] == "pca":
-            pca = True
-            n_in = 10
-            print "Using pca..."
+        numExamples = int(sys.argv[2])
+        batch_size = numExamples
+
 
         print "Reading data from {}".format(datasetCSVPath)
         main()
