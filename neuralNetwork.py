@@ -8,8 +8,10 @@ import pandas as pd
 import random
 import sys
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 
 # Define hyperparameters
+pca = False
 n_in, n_h, n_out = 122, 10, 3
 eta = 0.01
 numEpochs = 50
@@ -22,7 +24,7 @@ indicatorMap = {-1: 0, 0: 1, 1: 2}
 
 
 # Importing the dataset
-def importDataset(datasetCSVPath):
+def importDataset(datasetCSVPath, pca):
     testCSVPath = "test_" + datasetCSVPath
     trainCSVPath = "train_" + datasetCSVPath
 
@@ -41,10 +43,16 @@ def importDataset(datasetCSVPath):
     test_targets = np.array([indicatorMap[int(y)] for y in testDF[:, -1]], dtype='int64')
 
     # Turn into tensors
+    if pca:
+        pca = PCA(n_components=10)
+        inputs = pca.fit_transform(inputs)
+        pca = PCA(n_components=10)
+        test_inputs = pca.fit_transform(test_inputs)
     inputs = torch.from_numpy(inputs)
     targets = torch.from_numpy(targets)
     test_inputs = torch.from_numpy(test_inputs)
     test_targets = torch.from_numpy(test_targets)
+
 
     # Define dataset
     train_ds = TensorDataset(inputs, targets)
@@ -130,7 +138,7 @@ def evaluateModel(dl, model):
 
 def main():
     print "Loading data..."
-    inputs, targets, train_dl, validation_dl, evaluate_train_dl, test_dl = importDataset(datasetCSVPath)
+    inputs, targets, train_dl, validation_dl, evaluate_train_dl, test_dl = importDataset(datasetCSVPath, pca)
     print "Finished loading data!"
 
     # BModel
@@ -156,10 +164,15 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print "Usage: python neuralNetwork.py <DATA CSV FILE>"
+    if len(sys.argv) < 2:
+        print "Usage: python neuralNetwork.py <DATA CSV FILE> <pcaflag>"
     else:
         datasetCSVPath = sys.argv[1]
+        if len(sys.argv) == 3 and sys.argv[2] == "pca":
+            pca = True
+            n_in = 10
+            print "Using pca..."
+
         print "Reading data from {}".format(datasetCSVPath)
         main()
 
