@@ -14,7 +14,7 @@ from sklearn.decomposition import PCA
 pca = False
 n_in, n_h, n_out = 122, 10, 3
 eta = 0.01
-numEpochs = 50
+numEpochs = 1000
 validation_split = .2
 shuffle_dataset = True
 random_seed= 42

@@ -38,8 +38,8 @@ def importDataset(datasetCSVPath, pca):
     testDF = testDF[~np.isnan(testDF).any(axis=1)]
 
     # Separate into inputs and targets by last column
-    inputs = np.array(df[10000:10000 + numExamples, :-1], dtype='float32')
-    targets = np.array([indicatorMap[int(y)] for y in df[10000:10000 + numExamples, -1]], dtype='int64')
+    inputs = np.array(df[:numExamples, :-1], dtype='float32')
+    targets = np.array([indicatorMap[int(y)] for y in df[:numExamples, -1]], dtype='int64')
     test_inputs = np.array(testDF[:, :-1], dtype='float32')
     test_targets = np.array([indicatorMap[int(y)] for y in testDF[:, -1]], dtype='int64')
 
@@ -105,24 +105,31 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
 
         # Print progress
         if ((epoch + 1) % 1 == 0):
-            sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Dev error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), evaluateModel(evaluate_train_dl, model), evaluateModel(validation_dl, model)))
+            trainError = evaluateModel(evaluate_train_dl, model)
+            devError = evaluateModel(validation_dl, model)
+            sys.stdout.write("Epoch [{}/{}], Loss: {:.4f}, Train error: {:.4f}, Dev error: {:.4f}\r".format(epoch+1, num_epochs, loss.item(), trainError, devError))
             sys.stdout.flush()
 
             #append to arrays
             error.append(loss.item())
             iteration.append(epoch)
 
-    #plotting
-    plt.title('Loss Error Plot [neural network] [{}]'.format(datasetCSVPath[7:-8]))
-    plt.xlabel('Iteration')
-    plt.ylabel('Error')
-    plt.ion() # enables interactive mode
-    plt.plot(np.array(iteration), np.array(error))
-    plt.show()
+            if trainError < 0.0001:
+                break
 
-        # print model[0].weight.data
+        if ((epoch + 1) % 100 == 0):
 
-    plt.savefig('enhanced_nn_{}_{}_examples.png'.format(datasetCSVPath[7:-8], numExamples))
+            #plotting
+            plt.title('Loss Error Plot [neural network] [{}]'.format(datasetCSVPath[7:-8]))
+            plt.xlabel('Iteration')
+            plt.ylabel('Error')
+            plt.ion() # enables interactive mode
+            plt.plot(np.array(iteration), np.array(error))
+            plt.show()
+
+                # print model[0].weight.data
+
+            plt.savefig('enhanced_nn_{}_{}_examples.png'.format(datasetCSVPath[7:-8], numExamples))
     print ""
 
 
