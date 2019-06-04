@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import random
 import sys
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
