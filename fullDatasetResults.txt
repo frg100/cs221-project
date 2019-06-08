@@ -1,0 +1,1 @@
+Usage: python neuralNetwork.py <DATA CSV FILE> <numExamples>

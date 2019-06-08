@@ -93,6 +93,7 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
     error = []
     iteration = []
 
+    prevLoss = float('inf');
     for epoch in range(num_epochs):
         # Train in batches
         for xb, yb in train_dl:
@@ -116,8 +117,10 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
             error.append(loss.item())
             iteration.append(epoch)
 
-            if trainError < 0.0001:
+            if trainError < 0.0001 or abs(loss - prevLoss) <= 1e-5:
                 break
+
+            prevLoss = loss
 
         if ((epoch + 1) % 100 == 0):
 
