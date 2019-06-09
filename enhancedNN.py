@@ -117,7 +117,7 @@ def fit(num_epochs, model, loss_fn, opt, train_dl, validation_dl, evaluate_train
             error.append(loss.item())
             iteration.append(epoch)
 
-            if trainError < 0.0001 or abs(loss - prevLoss) <= 1e-6:
+            if trainError < 0.0001 or abs(loss - prevLoss) <= 1e-8:
                 break
 
             prevLoss = loss
